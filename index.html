@@ -172,8 +172,10 @@ h1, h2 { font-family: var(--display); font-weight: 400; text-wrap: balance; marg
 .song h2 { font-size: clamp(2.4rem, 6vw, 4.2rem); font-style: italic; margin: 10px 0 14px; }
 .song p { margin: 0 0 28px; color: var(--cream-dim); }
 .song .btn { display: inline-block; text-decoration: none; }
-.video { aspect-ratio: 16 / 9; max-width: 100%; border: 1px solid var(--navy-line); outline: 1px solid var(--cream); outline-offset: 10px; }
+.video { position: relative; aspect-ratio: 16 / 9; max-width: 100%; border: 1px solid var(--navy-line); outline: 1px solid var(--cream); outline-offset: 10px; }
 .video iframe { width: 100%; height: 100%; border: 0; display: block; }
+.video .sound-btn { position: absolute; left: 16px; bottom: 16px; width: auto; box-shadow: 0 10px 30px -8px rgba(0, 0, 0, .6); }
+[hidden] { display: none !important; }
 
 footer { padding-block: 40px; text-align: center; }
 
@@ -267,13 +269,62 @@ footer { padding-block: 40px; text-align: center; }
     <div>
       <p class="label">One last thing, sir</p>
       <h2>See you again</h2>
-      <p>This one is for you. Press play; it starts from 0:40.</p>
-      <a class="btn" href="https://youtu.be/wQ3ul97-DY4?t=40" target="_blank" rel="noopener">Play on YouTube from 0:40</a>
+      <p>This one is for you, from 0:40.</p>
+      <a class="btn" href="https://youtu.be/wQ3ul97-DY4?t=40" target="_blank" rel="noopener">Open on YouTube</a>
     </div>
     
     <div class="video">
-      <iframe src="https://www.youtube-nocookie.com/embed/wQ3ul97-DY4?start=40&amp;rel=0" title="See You Again, Fast and Furious 7 ending scene" allow="autoplay; encrypted-media; picture-in-picture" referrerpolicy="strict-origin-when-cross-origin" allowfullscreen></iframe>
+      <iframe id="song-frame" src="https://www.youtube-nocookie.com/embed/wQ3ul97-DY4?start=40&amp;rel=0&amp;playsinline=1&amp;enablejsapi=1" title="See You Again, Fast and Furious 7 ending scene" allow="autoplay; encrypted-media; picture-in-picture" referrerpolicy="strict-origin-when-cross-origin" allowfullscreen></iframe>
+      <button class="btn sound-btn" id="sound-btn" type="button" hidden>Tap for sound</button>
     </div>
+    <script>
+    // Starts the song at 0:40 once the video scrolls into view.
+    // Browsers only allow sound after the visitor has clicked or tapped the page,
+    // so if sound is blocked it plays muted and shows a "Tap for sound" button.
+    (function () {
+      const frame = document.getElementById("song-frame");
+      const soundBtn = document.getElementById("sound-btn");
+      let player, ready = false, reached = false, started = false;
+
+      function start() {
+        if (started) return;
+        started = true;
+        player.seekTo(40, true);
+        player.unMute();
+        player.playVideo();
+        setTimeout(() => {
+          const s = player.getPlayerState();
+          if (s !== YT.PlayerState.PLAYING && s !== YT.PlayerState.BUFFERING) {
+            player.mute();
+            player.playVideo();
+            soundBtn.hidden = false;
+          }
+        }, 1500);
+      }
+
+      window.onYouTubeIframeAPIReady = () => {
+        player = new YT.Player(frame, { events: { onReady: () => { ready = true; if (reached) start(); } } });
+      };
+
+      new IntersectionObserver((entries, obs) => {
+        if (!entries.some(e => e.isIntersecting)) return;
+        obs.disconnect();
+        reached = true;
+        if (ready) start();
+      }, { threshold: 0.6 }).observe(frame);
+
+      soundBtn.addEventListener("click", () => {
+        player.unMute();
+        player.setVolume(100);
+        player.playVideo();
+        soundBtn.hidden = true;
+      });
+
+      const api = document.createElement("script");
+      api.src = "https://www.youtube.com/iframe_api";
+      document.head.appendChild(api);
+    })();
+    </script>
     
   </div>
 </section>
